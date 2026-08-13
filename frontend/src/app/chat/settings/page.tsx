@@ -32,15 +32,6 @@ const PLACEHOLDER_FEATURES: Array<{ icon: string; label: string; desc: string; t
   { icon: "🔒", label: "End-to-end encryption", desc: "Coming soon — encryption is simulated for the demo experience.", tag: "Coming soon" },
 ];
 
-const BONUS_FEATURES: Array<{ icon: string; label: string; desc: string; tag: string }> = [
-  { icon: "📎", label: "Attachments (images / files)", desc: "Coming soon — file and image sharing are not implemented yet.", tag: "Coming soon" },
-  { icon: "↩️", label: "Reply-to / quoted messages", desc: "Coming soon — threaded replies are not implemented yet.", tag: "Coming soon" },
-  { icon: "⏳", label: "Disappearing messages (functional)", desc: "Coming soon — this feature is not functional in the demo app.", tag: "Coming soon" },
-  { icon: "🌙", label: "Dark mode", desc: "Coming soon — theme switching is not implemented yet.", tag: "Coming soon" },
-  { icon: "📱", label: "Responsive design (mobile, tablet, desktop)", desc: "Coming soon — the app is demo-focused and not fully responsive across all screen sizes.", tag: "Coming soon" },
-  { icon: "⌨️", label: "Keyboard shortcuts", desc: "Available — Enter sends, Ctrl/Cmd+E opens emoji, Ctrl/Cmd+L focuses composer, Ctrl/Cmd+R replies to the last message, and Esc clears reply/emoji.", tag: "Available" },
-];
-
 function getStoredPreferences(): Record<PreferenceKey, boolean> {
   if (typeof window === "undefined") return DEFAULT_PREFERENCES;
   try {
@@ -234,32 +225,6 @@ export default function SettingsPage() {
 
           <div className="space-y-3">
             {PLACEHOLDER_FEATURES.map((feature) => (
-              <div key={feature.label} className="flex items-start gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-lg shadow-xs border border-gray-200">
-                  {feature.icon}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-gray-900">{feature.label}</p>
-                    <span className="rounded-full bg-[#eef3ff] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#2c6bed]">
-                      {feature.tag}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs text-gray-500">{feature.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-6 rounded-2xl bg-white p-4 shadow-xs border border-gray-200">
-          <div className="mb-3">
-            <p className="text-xs font-bold uppercase tracking-wider text-gray-500">Bonus optional features</p>
-            <p className="mt-1 text-sm text-gray-500">These are not implemented in the current demo build.</p>
-          </div>
-
-          <div className="space-y-3">
-            {BONUS_FEATURES.map((feature) => (
               <div key={feature.label} className="flex items-start gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-lg shadow-xs border border-gray-200">
                   {feature.icon}
