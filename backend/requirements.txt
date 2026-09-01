@@ -1,7 +1,8 @@
 fastapi==0.115.0
 uvicorn[standard]==0.30.6
 sqlalchemy==2.0.35
-pydantic==2.9.2
+pydantic==2.8.2
+pydantic-core==2.20.1
 python-multipart==0.0.9
 websockets==13.1
 python-jose[cryptography]==3.3.0
@@ -9,3 +10,4 @@ aiofiles==23.2.1
 psycopg[binary]==3.2.1
 redis==5.1.1
 boto3==1.35.54
+gunicorn==23.0.0
