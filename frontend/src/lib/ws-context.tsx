@@ -12,6 +12,9 @@ export type WsEvent =
   | { type: "presence"; user_id: string; is_online: boolean; last_seen?: string }
   | { type: "read_receipt"; conversation_id: string; reader_id: string; message_ids: string[] }
   | { type: "delivery_update"; conversation_id: string; message_ids: string[]; status: MessageStatus }
+  | { type: "message_edited"; message: import("./types").Message }
+  | { type: "message_deleted"; message_id: string; conversation_id: string; for_everyone: boolean }
+  | { type: "reaction_update"; message_id: string; conversation_id: string; reactions: Record<string, string[]>; user_id: string; emoji: string; added: boolean }
   | { type: "error"; message: string }
   | { type: "pong" };
 
@@ -31,10 +34,10 @@ export function WsProvider({ children }: { children: ReactNode }) {
   const [connected, setConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const listenersRef = useRef<Set<Listener>>(new Set());
-  const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryDelay = useRef(1000);
+  const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const connect = useCallback(() => {
+  function connect() {
     if (!token) return;
     const ws = new WebSocket(`${WS_URL}/ws?token=${encodeURIComponent(token)}`);
 
@@ -55,7 +58,6 @@ export function WsProvider({ children }: { children: ReactNode }) {
     ws.onclose = () => {
       setConnected(false);
       wsRef.current = null;
-      // exponential backoff reconnect, capped at 15s
       reconnectTimer.current = setTimeout(() => {
         retryDelay.current = Math.min(retryDelay.current * 1.5, 15000);
         connect();
@@ -67,7 +69,7 @@ export function WsProvider({ children }: { children: ReactNode }) {
     };
 
     wsRef.current = ws;
-  }, [token]);
+  }
 
   useEffect(() => {
     if (token) {

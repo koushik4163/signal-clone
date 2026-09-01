@@ -6,3 +6,6 @@ python-multipart==0.0.9
 websockets==13.1
 python-jose[cryptography]==3.3.0
 aiofiles==23.2.1
+psycopg[binary]==3.2.1
+redis==5.1.1
+boto3==1.35.54

@@ -16,6 +16,8 @@ class User(Base):
     id = Column(String, primary_key=True, default=gen_uuid)
     phone_number = Column(String, unique=True, nullable=False, index=True)
     username = Column(String, unique=True, nullable=True, index=True)
+    email = Column(String, unique=True, nullable=True, index=True)
+    password_hash = Column(String, nullable=True)
     display_name = Column(String, nullable=False)
     avatar_url = Column(String, nullable=True)
     about = Column(String, nullable=True, default="Hey there! I am using Signal Clone.")

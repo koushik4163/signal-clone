@@ -1,101 +1,184 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #edf0f5;
-  --foreground: #0f172a;
-  --signal-blue: #2c6bed;
-  --signal-blue-hover: #1d5bd8;
-  --sidebar-bg: #ffffff;
-  --chat-bg: #edf0f5;
-  --border-color: #e2e8f0;
-  --panel-bg: #ffffff;
-  --panel-alt: #f3f4f6;
-  --muted: #6b7280;
-  --input-bg: #f3f4f6;
+  /* ── Brand palette (teal/cyan from auth page) ── */
+  --accent:       #00c8d0;
+  --accent-hover: #00b5bc;
+  --accent-dim:   rgba(0,200,208,0.15);
+
+  /* ── Background layers ── */
+  --bg-base:      #141828;   /* outermost / auth page */
+  --bg-layer1:    #181d30;   /* cards / sidebar */
+  --bg-layer2:    #1e2236;   /* input fields */
+  --bg-layer3:    #252c44;   /* borders / separators */
+  --bg-active:    #222840;   /* hovered/active row */
+
+  /* ── Chat specific ── */
+  --chat-bg:      #0f1621;   /* message area */
+  --sent-bubble:  #00535a;   /* sent message bubble */
+  --recv-bubble:  #1e2a38;   /* received message bubble */
+
+  /* ── Text ── */
+  --text-primary:   #e8ecf4;
+  --text-secondary: #8892b0;
+  --text-muted:     #4a5580;
 }
 
-:root[data-theme="dark"] {
-  --background: #0b1220;
-  --foreground: #e5e7eb;
-  --signal-blue: #6ea8fe;
-  --signal-blue-hover: #8ab4ff;
-  --sidebar-bg: #111827;
-  --chat-bg: #0f172a;
-  --border-color: #334155;
-  --panel-bg: #111827;
-  --panel-alt: #1f2937;
-  --muted: #94a3b8;
-  --input-bg: #0f172a;
+*, *::before, *::after {
+  box-sizing: border-box;
 }
 
-html {
-  background: var(--background);
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+html, body {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   overflow: hidden;
+  height: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-[data-theme="dark"] body {
-  background: var(--background);
-  color: var(--foreground);
+/* ── Chat message area ── */
+.chat-pattern {
+  background-color: var(--chat-bg);
+  background-image:
+    radial-gradient(circle at 20% 50%, rgba(0,200,208,0.03) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(0,180,200,0.03) 0%, transparent 40%),
+    radial-gradient(rgba(255,255,255,0.015) 1px, transparent 0);
+  background-size: 100% 100%, 100% 100%, 22px 22px;
 }
 
-[data-theme="dark"] .bg-white,
-[data-theme="dark"] .bg-gray-50,
-[data-theme="dark"] .bg-gray-100,
-[data-theme="dark"] .border-gray-200,
-[data-theme="dark"] .rounded-2xl,
-[data-theme="dark"] .rounded-xl,
-[data-theme="dark"] .rounded-full {
-  transition: background-color 0.2s ease, border-color 0.2s ease;
-}
-
-body[data-theme="dark"],
-[data-theme="dark"] body,
-[data-theme="dark"] html {
-  background: #0b1220 !important;
-}
-
-[data-theme="dark"] .bg-white { background-color: #111827 !important; }
-[data-theme="dark"] .bg-gray-50 { background-color: #111827 !important; }
-[data-theme="dark"] .bg-gray-100 { background-color: #1f2937 !important; }
-[data-theme="dark"] .bg-\[\#edf0f5\] { background-color: #0f172a !important; }
-[data-theme="dark"] .border-gray-200 { border-color: #334155 !important; }
-[data-theme="dark"] .text-gray-900 { color: #f8fafc !important; }
-[data-theme="dark"] .text-gray-700 { color: #dbe7f7 !important; }
-[data-theme="dark"] .text-gray-500 { color: #94a3b8 !important; }
-[data-theme="dark"] .text-gray-400 { color: #94a3b8 !important; }
-[data-theme="dark"] .text-gray-600 { color: #cbd5e1 !important; }
-[data-theme="dark"] .text-gray-300 { color: #dbe7f7 !important; }
-[data-theme="dark"] .placeholder\:text-gray-400::placeholder { color: #94a3b8 !important; }
-[data-theme="dark"] input,
-[data-theme="dark"] textarea {
-  background-color: #0f172a !important;
-  color: #e2e8f0 !important;
-}
-
-[data-theme="dark"] .bg-blue-50 { background-color: rgba(37, 99, 235, 0.18) !important; }
-[data-theme="dark"] .bg-red-50 { background-color: rgba(127, 29, 29, 0.25) !important; }
-
-/* Custom scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
+/* ── Custom scrollbars ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background-color: rgba(148, 163, 184, 0.4);
-  border-radius: 3px;
+  background-color: var(--bg-layer3);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--accent-dim);
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(100, 116, 139, 0.6);
+/* ── Online dot border matches sidebar bg ── */
+.online-dot-border { border-color: var(--bg-layer1) !important; }
+
+/* ── Teal glow for active elements ── */
+.teal-glow {
+  box-shadow: 0 0 20px rgba(0, 200, 208, 0.25);
 }
+
+/* ── Smooth transitions everywhere ── */
+button, a, input, textarea {
+  transition: all 0.15s ease;
+}
+
+.message-timestamp { color: #c4d0d8; opacity: 1; }
+.theme-toggle { position: relative; z-index: 2; }
+.theme-toggle svg { display: block; color: currentColor; fill: currentColor; stroke: currentColor; }
+
+/* Light mode overrides the shared shell without changing message semantics. */
+html:not(.dark) body { background: #eef3f7; color: #17212b; }
+html:not(.dark) .bg-\[\#141828\] { background-color: #f7fafc !important; }
+html:not(.dark) .bg-\[\#181d30\] { background-color: #ffffff !important; }
+html:not(.dark) .bg-\[\#1e2236\] { background-color: #edf2f6 !important; }
+html:not(.dark) .bg-\[\#222840\] { background-color: #e1ebf0 !important; }
+html:not(.dark) .bg-\[\#0f1621\],
+html:not(.dark) .bg-\[\#0d1117\] { background-color: #f2f6f8 !important; }
+html:not(.dark) .bg-\[\#071827\] { background-color: #e8f1f5 !important; }
+html:not(.dark) .bg-\[\#101827\] { background-color: #f7fafc !important; }
+html:not(.dark) .bg-\[\#0f172a\] { background-color: #ffffff !important; }
+html:not(.dark) .bg-\[\#101827\]\/90 { background-color: #f7fafc !important; }
+html:not(.dark) .bg-\[\#0f172a\]\/80 { background-color: #ffffff !important; }
+html:not(.dark) .bg-\[\#1e2a38\] { background-color: #e2ebf0 !important; }
+html:not(.dark) .bg-\[\#00535a\] { background-color: #007f82 !important; }
+html:not(.dark) .chat-messages-surface {
+  background: #f2f6f8 !important;
+  background-image: none !important;
+}
+html:not(.dark) .text-gray-100,
+html:not(.dark) .text-gray-200 { color: #17212b !important; }
+html:not(.dark) .text-gray-300,
+html:not(.dark) .text-gray-400,
+html:not(.dark) .text-\[\#8892b0\] { color: #5d7180 !important; }
+html:not(.dark) .border-\[\#252c44\] { border-color: #d5e0e6 !important; }
+html:not(.dark) .message-timestamp { color: #4f6875 !important; opacity: 1 !important; }
+html:not(.dark) .theme-toggle {
+  color: #0f5964 !important;
+  background: #ffffff !important;
+  border-color: #bfd0d8 !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12) !important;
+}
+html:not(.dark) .theme-toggle:hover {
+  color: #083d48 !important;
+  background: #e8f5f6 !important;
+}
+html:not(.dark) .theme-toggle svg,
+html:not(.dark) .theme-toggle svg path { color: #0f5964 !important; fill: #0f5964 !important; stroke: #0f5964 !important; }
+html:not(.dark) .auth-brand-panel {
+  background: linear-gradient(180deg, #d9f1f3 0%, #edf7f8 100%) !important;
+}
+html:not(.dark) .auth-brand-panel .text-white,
+html:not(.dark) .auth-brand-panel .text-slate-200,
+html:not(.dark) .auth-brand-panel .text-slate-300 { color: #17313a !important; }
+html:not(.dark) .auth-brand-panel .text-slate-500 { color: #5d7180 !important; }
+html:not(.dark) .auth-brand-panel .bg-white\/5 { background-color: rgba(255,255,255,0.55) !important; }
+html:not(.dark) .auth-main { background: #edf4f7 !important; }
+html:not(.dark) .auth-tabs {
+  background: #dce8ed !important;
+  border-color: #c9d9df !important;
+}
+html:not(.dark) .auth-tabs button:not([aria-selected="true"]) { color: #48616d !important; }
+html:not(.dark) .auth-form-card {
+  background: #ffffff !important;
+  border-color: #d4e1e6 !important;
+  box-shadow: 0 18px 42px rgba(48, 76, 89, 0.14) !important;
+}
+html:not(.dark) .auth-form-card .text-white,
+html:not(.dark) .auth-form-card .text-slate-300 { color: #21343d !important; }
+html:not(.dark) .auth-form-card .text-slate-400 { color: #607782 !important; }
+html:not(.dark) .auth-form-card .text-slate-500 { color: #718892 !important; }
+html:not(.dark) .auth-form-card .bg-\[\#1e2236\] { background-color: #edf3f6 !important; }
+html:not(.dark) .chat-pattern {
+  background-color: #f2f6f8 !important;
+  background-image:
+    radial-gradient(circle at 20% 50%, rgba(0,150,160,0.05) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(0,150,160,0.04) 0%, transparent 40%),
+    radial-gradient(rgba(23,49,58,0.04) 1px, transparent 0) !important;
+}
+
+/* ── Hover states: Tailwind generates a separate hover:bg-[...] class,
+   so it is NOT matched by the plain .bg-[...] rules above. These were
+   missing, which is why hovering a chat row or message went black. ── */
+html:not(.dark) .hover\:bg-\[\#1e2236\]:hover { background-color: #e6eef2 !important; }
+html:not(.dark) .hover\:bg-\[\#222840\]:hover { background-color: #dde9ee !important; }
+html:not(.dark) .hover\:bg-\[\#252c44\]:hover { background-color: #dde9ee !important; }
+
+/* ── Favourites panel used a background color (#1b2135) that had no
+   light-mode override anywhere, so it stayed black. ── */
+html:not(.dark) .bg-\[\#1b2135\] { background-color: #eef4f7 !important; }
+html:not(.dark) .bg-\[\#1b2135\] .text-gray-100 { color: #17313a !important; }
+
+/* ── Message bubbles: both own and received now render white,
+   distinguished only by a subtle border so they're still readable
+   as separate senders. ── */
+html:not(.dark) .bg-\[\#00535a\] {
+  background-color: #ffffff !important;
+  border: 1px solid #b6dade !important;
+  color: #17313a !important;
+}
+html:not(.dark) .bg-\[\#1e2a38\] {
+  background-color: #ffffff !important;
+  border: 1px solid #dbe6ea !important;
+  color: #17313a !important;
+}
+
+/* ── Reply-quote box and attachment text inside bubbles need matching
+   light-mode colors so they don't stay dark-on-white. ── */
+html:not(.dark) .bg-\[\#003f45\] { background-color: #eaf6f7 !important; }
+html:not(.dark) .text-teal-100 { color: #0f4b52 !important; }
+html:not(.dark) .text-\[\#d7f9ff\] { color: #123a41 !important; }
+html:not(.dark) .bg-\[\#0d1b22\] { background-color: #f2f8fa !important; }
+html:not(.dark) .border-\[\#00c8d0\]\/25,
+html:not(.dark) .border-\[\#00c8d0\]\/30,
+html:not(.dark) .border-\[\#00c8d0\]\/15 { border-color: rgba(0,127,130,0.3) !important; }

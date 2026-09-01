@@ -35,6 +35,7 @@ def _serialize(user: User):
         "id": user.id,
         "phone_number": user.phone_number,
         "username": user.username,
+        "email": user.email,
         "display_name": user.display_name,
         "avatar_url": user.avatar_url,
         "about": user.about,
@@ -57,7 +58,7 @@ def update_profile(
             if existing:
                 raise HTTPException(status_code=400, detail="Username already taken")
         current_user.username = payload.username
-    if payload.avatar_url is not None:
+    if "avatar_url" in payload.model_fields_set:
         current_user.avatar_url = payload.avatar_url
     if payload.about is not None:
         current_user.about = payload.about

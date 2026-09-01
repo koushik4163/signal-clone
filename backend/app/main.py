@@ -1,10 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.database import engine, Base
+from app.core.config import ENABLE_REDIS
+from app.core.logging import configure_logging
+from app.database import Base, engine
 from app import models  # noqa: F401 - ensures all models are registered on Base.metadata
 from app.routers import auth, users, contacts, conversations, messages, ws, upload
 
+configure_logging()
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Signal Clone API", version="1.0.0")

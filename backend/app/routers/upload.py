@@ -1,19 +1,21 @@
+import datetime
 import os
 import uuid
-import datetime
-from fastapi import APIRouter, Depends, UploadFile, File
+
+from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session as DBSession
 
+from app.core.security import get_current_user
+from app.core.storage import get_storage_backend
+from app.core.ws_manager import manager
 from app.database import get_db
 from app.models.user import User
-from app.core.security import get_current_user
-from app.core.ws_manager import manager
 from app.schemas.auth import UserOut
 
 router = APIRouter(prefix="/api/upload", tags=["upload"])
 
-UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "uploads")
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+storage = get_storage_backend()
 
 
 def _presence_is_online(user: User) -> bool:
@@ -49,23 +51,28 @@ async def upload_avatar(
 ):
     ext = os.path.splitext(file.filename or "avatar.png")[1] or ".png"
     filename = f"{uuid.uuid4().hex}{ext}"
-    filepath = os.path.join(UPLOAD_DIR, filename)
-
     contents = await file.read()
-    with open(filepath, "wb") as f:
-        f.write(contents)
+    avatar_url = storage.save_file(filename, contents)
 
-    current_user.avatar_url = f"/api/upload/files/{filename}"
+    current_user.avatar_url = avatar_url
     db.commit()
     db.refresh(current_user)
     return UserOut.model_validate(_serialize(current_user))
 
 
+@router.post("/file")
+async def upload_file(file: UploadFile = File(...)):
+    ext = os.path.splitext(file.filename or "file.bin")[1] or ".bin"
+    filename = f"{uuid.uuid4().hex}{ext}"
+    contents = await file.read()
+    url = storage.save_file(filename, contents)
+    return {
+        "filename": file.filename or filename,
+        "content_type": file.content_type or "application/octet-stream",
+        "url": url,
+    }
+
+
 @router.get("/files/{filename}")
 async def serve_file(filename: str):
-    from fastapi.responses import FileResponse
-    filepath = os.path.join(UPLOAD_DIR, filename)
-    if not os.path.exists(filepath):
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404, detail="File not found")
-    return FileResponse(filepath)
+    return storage.serve_file(filename)

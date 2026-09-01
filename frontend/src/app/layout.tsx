@@ -14,10 +14,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     (function() {
       try {
         const stored = JSON.parse(localStorage.getItem('signal_clone_preferences') || '{}');
-        const dark = !!stored.darkMode;
+        const dark = stored.darkMode !== false;
+        document.documentElement.classList.toggle('dark', dark);
         document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
       } catch {
-        document.documentElement.setAttribute('data-theme', 'light');
+        document.documentElement.classList.add('dark');
+        document.documentElement.setAttribute('data-theme', 'dark');
       }
     })();
   `;

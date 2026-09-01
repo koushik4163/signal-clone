@@ -35,19 +35,9 @@ export function formatLastSeen(iso: string | null): string {
   if (!iso) return "offline";
   const d = parseUtcDate(iso);
   if (isNaN(d.getTime())) return "offline";
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  if (diffMs <= 0) return "last seen just now";
-  const diffMin = Math.floor(diffMs / 60000);
 
-  if (diffMin < 1) return "last seen just now";
-  if (diffMin < 60) return `last seen ${diffMin} min ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `last seen ${diffHr} hr ago`;
-  const diffDays = Math.floor(diffHr / 24);
-  if (diffDays === 1) return "last seen yesterday";
-  if (diffDays < 7) return `last seen ${diffDays} days ago`;
-  return `last seen ${d.toLocaleDateString([], { day: "2-digit", month: "short" })}`;
+  const time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  return `Last online at ${time}`;
 }
 
 export function initials(name: string): string {

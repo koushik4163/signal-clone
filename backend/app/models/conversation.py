@@ -1,7 +1,7 @@
 import uuid
 import datetime
 import enum
-from sqlalchemy import Column, String, DateTime, ForeignKey, Enum, UniqueConstraint
+from sqlalchemy import Column, DateTime, Enum, ForeignKey, Index, String, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -34,7 +34,10 @@ class Conversation(Base):
 
 class ConversationParticipant(Base):
     __tablename__ = "conversation_participants"
-    __table_args__ = (UniqueConstraint("conversation_id", "user_id", name="uq_conv_user"),)
+    __table_args__ = (
+        UniqueConstraint("conversation_id", "user_id", name="uq_conv_user"),
+        Index("ix_conv_participants_user_conversation", "user_id", "conversation_id"),
+    )
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     conversation_id = Column(String, ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False)

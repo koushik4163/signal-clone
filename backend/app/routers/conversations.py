@@ -7,6 +7,7 @@ from app.database import get_db
 from app.models.user import User
 from app.models.conversation import Conversation, ConversationParticipant, ConversationType, ParticipantRole
 from app.models.message import Message, MessageReceipt, MessageStatus
+from app.models.reaction import MessageDeletedFor
 from app.core.security import get_current_user
 from app.core.ws_manager import manager
 from app.schemas.conversation import (
@@ -16,6 +17,7 @@ from app.schemas.conversation import (
     ParticipantOut,
     LastMessagePreview,
     GroupMemberAction,
+    GroupUpdate,
 )
 from app.schemas.auth import UserOut
 
@@ -65,9 +67,16 @@ def _serialize_conversation(conv: Conversation, current_user_id: str, db: DBSess
         for p in conv.participants
     ]
 
+    hidden_message_ids = db.query(MessageDeletedFor.message_id).filter(
+        MessageDeletedFor.user_id == current_user_id,
+    )
     last_msg = (
         db.query(Message)
-        .filter(Message.conversation_id == conv.id)
+        .filter(
+            Message.conversation_id == conv.id,
+            Message.is_deleted == False,
+            Message.id.notin_(hidden_message_ids),
+        )
         .order_by(desc(Message.created_at))
         .first()
     )
@@ -86,6 +95,8 @@ def _serialize_conversation(conv: Conversation, current_user_id: str, db: DBSess
         q = db.query(Message).filter(
             Message.conversation_id == conv.id,
             Message.sender_id != current_user_id,
+            Message.is_deleted == False,
+            Message.id.notin_(hidden_message_ids),
         )
         if my_participant.last_read_message_id:
             last_read = db.query(Message).filter(Message.id == my_participant.last_read_message_id).first()
@@ -286,6 +297,31 @@ def remove_member(
         raise HTTPException(status_code=404, detail="User not in group")
 
     db.delete(target_part)
+    db.commit()
+    db.refresh(conv)
+    return _serialize_conversation(conv, current_user.id, db)
+
+
+@router.patch("/{conversation_id}", response_model=ConversationOut)
+def update_group(
+    conversation_id: str,
+    payload: GroupUpdate,
+    current_user: User = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    conv = _get_conv_for_member(db, conversation_id, current_user.id)
+    my_part = db.query(ConversationParticipant).filter(
+        ConversationParticipant.conversation_id == conversation_id,
+        ConversationParticipant.user_id == current_user.id,
+    ).first()
+    if conv.type != ConversationType.group or my_part.role != ParticipantRole.admin:
+        raise HTTPException(status_code=403, detail="Only group admins can change group info")
+    name = payload.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Group name is required")
+    conv.name = name
+    if "avatar_url" in payload.model_fields_set:
+        conv.avatar_url = payload.avatar_url
     db.commit()
     db.refresh(conv)
     return _serialize_conversation(conv, current_user.id, db)

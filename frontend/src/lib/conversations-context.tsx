@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable react-hooks/set-state-in-effect */
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from "react";
 import { api } from "./api";
@@ -24,9 +25,19 @@ export function ConversationsProvider({ children }: { children: ReactNode }) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const conversationsRef = useRef<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [activeConversationId, setActiveConversationIdState] = useState<string | null>(null);
   const activeIdRef = useRef<string | null>(null);
-  activeIdRef.current = activeConversationId;
+
+  const setActiveConversationId = useCallback((id: string | null) => {
+    setActiveConversationIdState(id);
+    setConversations((prev) =>
+      id ? prev.map((c) => (c.id === id ? { ...c, unread_count: 0 } : c)) : prev
+    );
+  }, []);
+
+  useEffect(() => {
+    activeIdRef.current = activeConversationId;
+  }, [activeConversationId]);
   const [typingMap, setTypingMap] = useState<Record<string, string[]>>({});
   const typingTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 

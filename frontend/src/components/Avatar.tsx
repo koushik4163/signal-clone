@@ -1,4 +1,5 @@
 import { initials } from "@/lib/format";
+import { API_URL } from "@/lib/api";
 
 const COLORS = [
   "#3a76f0", "#8b5cf6", "#ec4899", "#f59e0b",
@@ -24,12 +25,15 @@ export default function Avatar({
   online?: boolean;
   showOnlineDot?: boolean;
 }) {
+  const shouldShowOnlineDot = Boolean(showOnlineDot && online);
+  const resolvedSrc = src?.startsWith("/") ? `${API_URL}${src}` : src;
+
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
-      {src ? (
+      {resolvedSrc ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={src}
+          src={resolvedSrc}
           alt={name}
           width={size}
           height={size}
@@ -44,11 +48,9 @@ export default function Avatar({
           {initials(name)}
         </div>
       )}
-      {showOnlineDot && (
+      {shouldShowOnlineDot && (
         <span
-          className={`absolute bottom-0 right-0 rounded-full border-2 border-[#182230] ${
-            online ? "bg-emerald-500" : "bg-slate-500"
-          }`}
+          className="absolute bottom-0 right-0 rounded-full border-2 border-[#181d30] bg-[#00c8d0]"
           style={{ width: size * 0.28, height: size * 0.28 }}
         />
       )}

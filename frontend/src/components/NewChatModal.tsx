@@ -1,32 +1,27 @@
 "use client";
+/* eslint-disable react-hooks/set-state-in-effect */
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
-import { useAuth } from "@/lib/auth-context";
 import { useConversations } from "@/lib/conversations-context";
-import type { Contact, User } from "@/lib/types";
+import type { User } from "@/lib/types";
 import Avatar from "./Avatar";
 
 type Tab = "direct" | "group";
 
 export default function NewChatModal({
   onClose,
-  onContactAdded,
 }: {
   onClose: () => void;
-  onContactAdded?: (contact: Contact) => void;
 }) {
   const [tab, setTab] = useState<Tab>("direct");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<User[]>([]);
-  const [contacts, setContacts] = useState<User[]>([]);
   const [selected, setSelected] = useState<User[]>([]);
   const [groupName, setGroupName] = useState("");
   const [busy, setBusy] = useState(false);
-  const [addingContactId, setAddingContactId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { user } = useAuth();
   const { upsertConversation } = useConversations();
   const router = useRouter();
 
@@ -39,10 +34,6 @@ export default function NewChatModal({
   }, [onClose]);
 
   useEffect(() => {
-    api.listContacts().then((cs) => setContacts(cs.map((c) => c.user)));
-  }, []);
-
-  useEffect(() => {
     if (!query.trim()) {
       setResults([]);
       return;
@@ -53,7 +44,7 @@ export default function NewChatModal({
     return () => clearTimeout(handle);
   }, [query]);
 
-  const listToShow = query.trim() ? results : contacts;
+  const listToShow = results;
 
   async function startDirect(u: User) {
     setBusy(true);
@@ -95,78 +86,65 @@ export default function NewChatModal({
     }
   }
 
-  async function addContact(u: User) {
-    setError(null);
-    setAddingContactId(u.id);
-    try {
-      const created = await api.addContact({ phone_number: u.phone_number });
-      setContacts((prev) => (prev.some((c) => c.id === u.id) ? prev : [u, ...prev]));
-      onContactAdded?.(created);
-    } catch (err) {
-      if (err instanceof ApiError && err.message.toLowerCase().includes("already")) {
-        const existing = await api.listContacts();
-        setContacts(existing.map((c) => c.user));
-        const match = existing.find((c) => c.user.id === u.id);
-        if (match) onContactAdded?.(match);
-      } else {
-        setError(err instanceof ApiError ? err.message : "Failed to add contact");
-      }
-    } finally {
-      setAddingContactId(null);
-    }
-  }
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs px-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center px-4"
+      style={{ background: "rgba(10,14,28,0.7)", backdropFilter: "blur(6px)" }}
+      onClick={onClose}
+    >
       <div
-        className="flex max-h-[80vh] w-full max-w-md flex-col rounded-3xl bg-white shadow-2xl border border-gray-200 text-gray-900"
+        className="flex max-h-[82vh] w-full max-w-md flex-col rounded-2xl border border-[#252c44] shadow-2xl"
+        style={{ background: "#181d30" }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-          <h2 className="text-lg font-bold text-gray-900">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-[#252c44] px-6 py-4">
+          <h2 className="text-base font-bold text-gray-100">
             {tab === "direct" ? "New Chat" : "New Group"}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-lg font-bold">
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-white transition text-xl font-bold cursor-pointer"
+          >
             ✕
           </button>
         </div>
 
+        {/* Tabs */}
         <div className="flex gap-2 px-6 pt-4">
-          <button
-            onClick={() => setTab("direct")}
-            className={`rounded-full px-4 py-1.5 text-xs font-bold transition ${
-              tab === "direct" ? "bg-[#2c6bed] text-white shadow-xs" : "bg-gray-100 text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            Direct Chat
-          </button>
-          <button
-            onClick={() => setTab("group")}
-            className={`rounded-full px-4 py-1.5 text-xs font-bold transition ${
-              tab === "group" ? "bg-[#2c6bed] text-white shadow-xs" : "bg-gray-100 text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            Group Chat
-          </button>
+          {(["direct", "group"] as Tab[]).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`rounded-full px-4 py-1.5 text-xs font-bold transition cursor-pointer capitalize ${
+                tab === t
+                  ? "bg-[#00c8d0] text-[#0d1117]"
+                  : "bg-[#1e2236] text-gray-400 hover:text-white border border-[#252c44]"
+              }`}
+            >
+              {t === "direct" ? "Direct Chat" : "Group Chat"}
+            </button>
+          ))}
         </div>
 
+        {/* Group name input */}
         {tab === "group" && (
           <div className="px-6 pt-3">
             <input
               value={groupName}
               onChange={(e) => setGroupName(e.target.value)}
               placeholder="Group name"
-              className="w-full rounded-xl border border-gray-300 bg-gray-50 px-3.5 py-2 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:bg-white focus:border-[#2c6bed]"
+              className="w-full rounded-xl border border-[#252c44] bg-[#1e2236] px-3.5 py-2.5 text-sm text-gray-100 outline-none placeholder-gray-500 focus:border-[#00c8d0]"
             />
             {selected.length > 0 && (
               <div className="mt-2.5 flex flex-wrap gap-1.5">
                 {selected.map((u) => (
                   <span
                     key={u.id}
-                    className="flex items-center gap-1.5 rounded-full bg-blue-50 border border-blue-200 px-3 py-1 text-xs font-semibold text-[#2c6bed]"
+                    className="flex items-center gap-1.5 rounded-full border border-[#252c44] bg-[#1e2236] px-3 py-1 text-xs font-semibold text-[#00c8d0]"
                   >
                     {u.display_name}
-                    <button onClick={() => toggleSelect(u)} className="hover:text-red-500">✕</button>
+                    <button onClick={() => toggleSelect(u)} className="hover:text-red-400 cursor-pointer">✕</button>
                   </span>
                 ))}
               </div>
@@ -174,79 +152,87 @@ export default function NewChatModal({
           </div>
         )}
 
+        {/* Search */}
         <div className="px-6 pt-3">
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by name, username, or phone"
-            className="w-full rounded-xl border border-gray-300 bg-gray-50 px-3.5 py-2 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:bg-white focus:border-[#2c6bed]"
-          />
+          <div className="relative">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8892b0" strokeWidth="2">
+              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search by name, username, or phone"
+              className="w-full rounded-xl border border-[#252c44] bg-[#1e2236] pl-9 pr-4 py-2.5 text-sm text-gray-100 outline-none placeholder-gray-500 focus:border-[#00c8d0]"
+            />
+          </div>
         </div>
 
-        {error && <p className="px-6 pt-2 text-xs font-semibold text-red-600">{error}</p>}
+        {error && (
+          <p className="px-6 pt-2 text-xs font-semibold text-red-400">{error}</p>
+        )}
 
-        <div className="mt-2 flex-1 overflow-y-auto px-3 pb-4 divide-y divide-gray-100">
-          {!query.trim() && (
-            <p className="px-3 pb-1 pt-3 text-xs font-bold uppercase tracking-wider text-gray-400">
-              Contacts
-            </p>
-          )}
+        {/* Results list */}
+        <div className="mt-2 flex-1 overflow-y-auto px-3 pb-4 divide-y divide-[#1e2236]">
           {listToShow.length === 0 && (
-            <p className="px-3 py-6 text-center text-sm text-gray-400">No users found</p>
+            <p className="px-3 py-6 text-center text-sm text-[#8892b0]">
+              No users found
+            </p>
           )}
           {listToShow.map((u) => {
             const isSelected = selected.some((s) => s.id === u.id);
-            const isContact = contacts.some((c) => c.id === u.id);
             return (
-              <div key={u.id} className="flex items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-gray-50 transition">
+              <div
+                key={u.id}
+                className="flex items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-[#1e2236] transition"
+              >
                 <button
                   disabled={busy}
                   onClick={() => (tab === "direct" ? startDirect(u) : toggleSelect(u))}
-                  className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-1.5 text-left disabled:opacity-50"
+                  className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-2 text-left disabled:opacity-50 cursor-pointer"
                 >
-                  <Avatar name={u.display_name} src={u.avatar_url} size={40} />
+                  <Avatar name={u.display_name} src={u.avatar_url} size={40} online={u.is_online} showOnlineDot />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-bold text-gray-900">{u.display_name}</p>
-                    <p className="truncate text-xs text-gray-500">{u.username ? `@${u.username}` : u.phone_number}</p>
+                    <p className="truncate text-sm font-bold text-gray-100">{u.display_name}</p>
+                    <p className="truncate text-xs text-[#8892b0]">
+                      {u.username ? `@${u.username}` : u.phone_number}
+                    </p>
                   </div>
                   {tab === "group" && (
                     <span
-                      className={`flex h-5 w-5 items-center justify-center rounded-full border-2 text-xs font-bold ${
-                        isSelected ? "border-[#2c6bed] bg-[#2c6bed] text-white" : "border-gray-300"
+                      className={`flex h-5 w-5 items-center justify-center rounded-full border-2 text-xs font-bold transition ${
+                        isSelected
+                          ? "border-[#00c8d0] bg-[#00c8d0] text-[#0d1117]"
+                          : "border-[#252c44]"
                       }`}
                     >
                       {isSelected && "✓"}
                     </span>
                   )}
                 </button>
-
-                {tab === "direct" && u.id !== user?.id && (
-                  <button
-                    disabled={busy}
-                    onClick={() => {
-                      if (!isContact) addContact(u);
-                      startDirect(u);
-                    }}
-                    title={isContact ? "Open chat" : "Add contact and start chat"}
-                    className="flex shrink-0 items-center gap-1 rounded-full bg-[#2c6bed] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#1d5bd8] shadow-xs active:scale-95 disabled:opacity-50"
-                  >
-                    <span className="text-sm leading-none font-extrabold">+</span>
-                    <span>{isContact ? "Chat" : "Add"}</span>
-                  </button>
-                )}
               </div>
             );
           })}
         </div>
 
+        {/* Group create button */}
         {tab === "group" && (
-          <div className="border-t border-gray-200 px-6 py-4">
+          <div className="border-t border-[#252c44] px-6 py-4">
             <button
               onClick={createGroup}
               disabled={busy || !groupName.trim() || selected.length === 0}
-              className="w-full rounded-xl bg-[#2c6bed] px-4 py-3 font-bold text-white transition hover:bg-[#1d5bd8] shadow-md disabled:opacity-40"
+              className="w-full rounded-xl py-3 font-bold text-sm text-[#0d1117] transition disabled:opacity-40 cursor-pointer"
+              style={{
+                background:
+                  busy || !groupName.trim() || selected.length === 0
+                    ? "#1e2236"
+                    : "linear-gradient(90deg, #00b8c8, #00c8d0)",
+                color:
+                  busy || !groupName.trim() || selected.length === 0 ? "#4a5580" : "#0d1117",
+              }}
             >
-              {busy ? "Creating..." : `Create Group (${selected.length} member${selected.length === 1 ? "" : "s"})`}
+              {busy
+                ? "Creating..."
+                : `Create Group (${selected.length} member${selected.length === 1 ? "" : "s"})`}
             </button>
           </div>
         )}

@@ -6,12 +6,11 @@ from sqlalchemy.orm import Session as DBSession
 
 from app.database import get_db
 from app.models.user import User
-from app.core.security import issue_otp, check_otp, create_session, get_current_user
+from app.core.security import hash_password, verify_password, create_session, get_current_user
 from app.core.ws_manager import manager
 from app.schemas.auth import (
-    SendOtpRequest,
-    SendOtpResponse,
-    VerifyOtpRequest,
+    SignupRequest,
+    LoginRequest,
     AuthResponse,
     UserOut,
 )
@@ -24,78 +23,95 @@ def _touch_presence(user: User):
     user.last_seen = datetime.datetime.now(datetime.timezone.utc)
 
 
-def _normalize_identifier(raw: str) -> str:
-    return raw.strip().lstrip("@")
+@router.post("/signup", response_model=AuthResponse)
+def signup(payload: SignupRequest, db: DBSession = Depends(get_db)):
+    username = payload.username.strip().lstrip("@")
+    email = payload.email.strip().lower()
+    phone_number = payload.phone_number.strip()
+    display_name = payload.display_name.strip()
 
-
-def _looks_like_phone(identifier: str) -> bool:
-    cleaned = identifier.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
-    if cleaned.startswith("+"):
-        cleaned = cleaned[1:]
-    return cleaned.isdigit() and len(cleaned) >= 7
-
-
-@router.post("/send-otp", response_model=SendOtpResponse)
-def send_otp(payload: SendOtpRequest, db: DBSession = Depends(get_db)):
-    identifier = _normalize_identifier(payload.identifier)
-    if not identifier:
-        raise HTTPException(status_code=400, detail="Identifier is required")
-
-    otp = issue_otp(identifier)
-    normalized = identifier.lower()
-    user = db.query(User).filter(
-        (func.lower(User.phone_number) == normalized) |
-        (func.lower(User.username) == normalized)
-    ).first()
-
-    return SendOtpResponse(
-        message=f"OTP sent to {identifier}",
-        mocked_otp=otp,
-        is_new_user=(user is None),
-    )
-
-
-@router.post("/verify-otp", response_model=AuthResponse)
-def verify_otp(payload: VerifyOtpRequest, db: DBSession = Depends(get_db)):
-    identifier = _normalize_identifier(payload.identifier)
-    if not identifier:
-        raise HTTPException(status_code=400, detail="Identifier is required")
-
-    if not check_otp(identifier, payload.otp):
-        raise HTTPException(status_code=400, detail="Invalid OTP code. Please enter the verification code sent to your account.")
-
-    normalized_identifier = identifier.lower()
-    user = db.query(User).filter(
-        (func.lower(User.phone_number) == normalized_identifier) |
-        (func.lower(User.username) == normalized_identifier)
-    ).first()
-
-    if user is None:
-        if not payload.display_name or not payload.display_name.strip():
-            raise HTTPException(status_code=400, detail="Display name is required for new accounts.")
-
-        requested_username = (payload.username or "").strip().lstrip("@")
-        derived_username = identifier if not _looks_like_phone(identifier) and not requested_username else requested_username
-        
-        normalized_username = derived_username.lower() if derived_username else None
-        if normalized_username:
-            existing = db.query(User).filter(func.lower(User.username) == normalized_username).first()
-            if existing:
-                raise HTTPException(status_code=400, detail="Username is already taken by another account.")
-
-        phone_number = identifier if _looks_like_phone(identifier) else identifier
-
-        user = User(
-            phone_number=phone_number,
-            display_name=payload.display_name.strip(),
-            username=normalized_username or None,
+    # Password complexity check: min 8 chars, uppercase, lowercase, digit, special char
+    special_chars = r"!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>\/?"
+    if (
+        len(payload.password) < 8
+        or not re.search(r"[A-Z]", payload.password)
+        or not re.search(r"[a-z]", payload.password)
+        or not re.search(r"\d", payload.password)
+        or not re.search(f"[{special_chars}]", payload.password)
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Password must be at least 8 characters long and contain uppercase, lowercase, number, and special character."
         )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
+
+    # Username format validation (3-20 chars, letters, numbers, _)
+    if not re.match(r"^[a-zA-Z0-9_]{3,20}$", username):
+        raise HTTPException(
+            status_code=400,
+            detail="Username must be 3–20 characters long and contain only letters, numbers, and underscores."
+        )
+
+    # Full name format validation (2-50 chars, letters, spaces, hyphens, apostrophes)
+    if not re.match(r"^[a-zA-Z\s'-]{2,50}$", display_name):
+        raise HTTPException(
+            status_code=400,
+            detail="Full Name must be 2–50 characters long and contain only letters, spaces, hyphens, and apostrophes."
+        )
+
+    # Unique checks
+    if db.query(User).filter(func.lower(User.username) == username.lower()).first():
+        raise HTTPException(status_code=400, detail="Username is already taken.")
+
+    if db.query(User).filter(func.lower(User.email) == email).first():
+        raise HTTPException(status_code=400, detail="An account with this email already exists.")
+
+    if db.query(User).filter(User.phone_number == phone_number).first():
+        raise HTTPException(status_code=400, detail="An account with this phone number already exists.")
+
+    hashed = hash_password(payload.password)
+
+    user = User(
+        username=username,
+        email=email,
+        phone_number=phone_number,
+        display_name=display_name,
+        password_hash=hashed,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
 
     _touch_presence(user)
     db.commit()
+
+    token = create_session(db, user.id)
+    return AuthResponse(token=token, user=UserOut.model_validate(_serialize(user)))
+
+
+@router.post("/login", response_model=AuthResponse)
+def login(payload: LoginRequest, db: DBSession = Depends(get_db)):
+    identifier = payload.username.strip().lstrip("@").lower()
+    if not identifier:
+        raise HTTPException(status_code=400, detail="Username, email, or phone number is required.")
+
+    if not payload.password:
+        raise HTTPException(status_code=400, detail="Password is required.")
+
+    user = db.query(User).filter(
+        (func.lower(User.username) == identifier) |
+        (func.lower(User.email) == identifier) |
+        (func.lower(User.phone_number) == identifier)
+    ).first()
+
+    if not user or not user.password_hash:
+        raise HTTPException(status_code=401, detail="Invalid username/email or password.")
+
+    if not verify_password(payload.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid username/email or password.")
+
+    _touch_presence(user)
+    db.commit()
+
     token = create_session(db, user.id)
     return AuthResponse(token=token, user=UserOut.model_validate(_serialize(user)))
 
@@ -138,6 +154,7 @@ def _serialize(user: User):
         "id": user.id,
         "phone_number": user.phone_number,
         "username": user.username,
+        "email": user.email,
         "display_name": user.display_name,
         "avatar_url": user.avatar_url,
         "about": user.about,

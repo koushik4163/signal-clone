@@ -4,6 +4,7 @@ export interface User {
   id: string;
   phone_number: string;
   username: string | null;
+  email?: string | null;
   display_name: string;
   avatar_url: string | null;
   about: string | null;
@@ -48,5 +49,9 @@ export interface Message {
   status: MessageStatus;
   reply_to_id: string | null;
   created_at: string;
+  edited_at?: string | null;
+  is_deleted?: boolean;
+  reactions?: Record<string, string[]>; // emoji -> [user_id, ...]
   client_temp_id?: string | null;
+  is_pinned?: boolean;
 }

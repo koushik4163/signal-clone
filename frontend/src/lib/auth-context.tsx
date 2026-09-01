@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable react-hooks/set-state-in-effect */
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -9,7 +10,7 @@ interface AuthContextValue {
   user: User | null;
   token: string | null;
   loading: boolean;
-  login: (token: string, user: User) => void;
+  login: (token: string, user: User, rememberMe?: boolean) => void;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -17,6 +18,14 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 const TOKEN_KEY = "signal_clone_token";
+const SESSION_TOKEN_KEY = "signal_clone_session_token";
+
+function getPersistedToken() {
+  if (typeof window === "undefined") return null;
+  const saved = localStorage.getItem(TOKEN_KEY);
+  if (saved) return saved;
+  return sessionStorage.getItem(SESSION_TOKEN_KEY);
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -25,7 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    const stored = localStorage.getItem(TOKEN_KEY);
+    const stored = getPersistedToken();
     if (!stored) {
       setLoading(false);
       return;
@@ -36,13 +45,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then((u) => setUser(u))
       .catch(() => {
         localStorage.removeItem(TOKEN_KEY);
+        sessionStorage.removeItem(SESSION_TOKEN_KEY);
         setToken(null);
       })
       .finally(() => setLoading(false));
   }, []);
 
-  const login = useCallback((newToken: string, newUser: User) => {
-    localStorage.setItem(TOKEN_KEY, newToken);
+  const login = useCallback((newToken: string, newUser: User, rememberMe = false) => {
+    if (rememberMe) {
+      localStorage.setItem(TOKEN_KEY, newToken);
+      sessionStorage.removeItem(SESSION_TOKEN_KEY);
+    } else {
+      localStorage.removeItem(TOKEN_KEY);
+      sessionStorage.setItem(SESSION_TOKEN_KEY, newToken);
+    }
     setToken(newToken);
     setUser(newUser);
   }, []);
@@ -54,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // ignore network errors on logout
     }
     localStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(SESSION_TOKEN_KEY);
     setToken(null);
     setUser(null);
     router.push("/login");

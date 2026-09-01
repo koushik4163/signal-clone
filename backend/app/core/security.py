@@ -7,25 +7,31 @@ from app.database import get_db
 from app.models.session import Session as SessionModel
 from app.models.user import User
 
-# --- Dynamic OTP store (in-memory) ---
-FIXED_OTP = "123456"
-_otp_requests: dict[str, str] = {}
+import hashlib
+import hmac
+
+def hash_password(password: str) -> str:
+    salt = secrets.token_hex(16)
+    pwd_hash = hashlib.pbkdf2_hmac(
+        "sha256",
+        password.encode("utf-8"),
+        salt.encode("utf-8"),
+        100000,
+    ).hex()
+    return f"{salt}${pwd_hash}"
 
 
-def issue_otp(phone_number: str) -> str:
-    key = phone_number.strip().lower()
-    otp = f"{secrets.randbelow(900000) + 100000:06d}"
-    _otp_requests[key] = otp
-    return otp
-
-
-def check_otp(phone_number: str, otp: str) -> bool:
-    key = phone_number.strip().lower()
-    # Accept dynamic OTP issued for this number/username OR standard fallback 123456
-    stored = _otp_requests.get(key)
-    if stored and otp.strip() == stored:
-        return True
-    return otp.strip() == FIXED_OTP
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    if not hashed_password or "$" not in hashed_password:
+        return False
+    salt, stored_hash = hashed_password.split("$", 1)
+    computed_hash = hashlib.pbkdf2_hmac(
+        "sha256",
+        plain_password.encode("utf-8"),
+        salt.encode("utf-8"),
+        100000,
+    ).hex()
+    return hmac.compare_digest(computed_hash, stored_hash)
 
 
 SESSION_TTL_DAYS = 30

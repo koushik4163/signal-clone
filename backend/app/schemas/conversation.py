@@ -59,3 +59,8 @@ class ConversationOut(BaseModel):
 
 class GroupMemberAction(BaseModel):
     user_id: str
+
+
+class GroupUpdate(BaseModel):
+    name: str
+    avatar_url: Optional[str] = None

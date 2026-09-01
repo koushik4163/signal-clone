@@ -18,6 +18,7 @@ class MessageOut(BaseModel):
     reply_to_id: Optional[str] = None
     created_at: str
     client_temp_id: Optional[str] = None
+    is_pinned: bool = False
 
     class Config:
         from_attributes = True
